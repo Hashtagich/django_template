@@ -1,0 +1,51 @@
+
+services:
+  web:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    env_file:
+      - .env
+    entrypoint: /usr/src/app/entrypoint.sh
+    command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - static_volume:/usr/src/app/static
+      - media_volume:/home/app/web/media
+#    expose:
+#      - ${BACKEND_SERVER__PORT_CONTAINER}
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${DB__NAME}
+      POSTGRES_USER: ${DB__LOGIN}
+      POSTGRES_PASSWORD: ${DB__PASS}
+    ports:
+      - "${DB__PORT_HOST}:${DB__PORT_CONTAINER}"
+
+  nginx:
+    build: ./nginx
+    volumes:
+#      - frontend:/usr/share/nginx/html
+      - static_volume:/usr/src/app/static
+      - media_volume:/home/app/web/media
+    env_file:
+      - .env
+    ports:
+      - "${NGINX__PORT_HOST}:${NGINX__PORT_CONTAINER}"
+      - "${BACKEND_SERVER__PORT_HOST}:${BACKEND_SERVER__PORT_CONTAINER}"
+    depends_on:
+      - web
+
+
+volumes:
+  postgres_data:
+  static_volume:
+  media_volume:
